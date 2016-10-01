@@ -143,23 +143,252 @@ def processTurn(serverResponse):
         'Actions': actions
     }
 
-def findMinHealth(enemyteam):
-    target = random.choice(enemyteam)
+def findMinHealth(team):
+    chosen = random.choice(team)
+
     minHealth = sys.maxint
-    for character in enemyteam:
+    for character in team:
         charHealth = character.attributes.health
         if not character.is_dead() and charHealth < minHealth:
-            target = character
-    return target
+            chosen = character
+    return chosen
 
-def findToughest(enemyteam):
-    target = random.choice(enemyteam)
-    minToughness = sys.maxint
-    for character in enemyteam:
-        charTough = character.attributes.maxHealth*character.attributes.armor
-        if not character.is_dead() and charTough < minToughness:
-            target = character
-    return target
+def findVulnerable(team):
+    chosen = random.choice(team)
+
+    minArmor = sys.maxint
+    for character in team:
+        charArmor = character.attributes.armor
+        if not character.is_dead() and charArmor < minArmor:
+            chosen = character
+    return chosen
+
+def findToughest(team):
+    chosen = random.choice(team)
+
+    maxToughness = sys.minint
+    for character in team:
+        # max damage is 200
+        charTough = character.attributes.health/max(1,200-character.attributes.armor)
+        if not character.is_dead() and charTough > maxToughness:
+            chosen = character
+    return chosen
+
+def findMainCaster(team):
+    chosen = random.choice(team)
+
+    maxSP = sys.minint
+    for character in team:
+        charSP = character.attributes.spellPower
+        if not character.is_dead() and charSP > maxSP:
+            chosen = character
+    return chosen
+
+def isSupportCaster(char):
+    if character.classId in ['Druid','Enchanter']:
+        return True
+    return False
+
+def isAttackCaster(char):
+    if character.classId in ['Sorcerer','Wizard']:
+        return True
+    return False
+
+def findMainDamage(team):
+    chosen = random.choice(team)
+
+    maxDam = sys.minint
+    for character in team:
+        charDam = character.attributes.damage
+        if not character.is_dead() and charDam > maxDam:
+            chosen = character
+    return chosen
+
+def findStunned(team):
+    chosen = None
+
+    for character in team:
+        if not character.is_dead() and character.attributes.stunned:
+            chosen = character
+    return chosen
+
+def findSilenced(team):
+    chosen = None
+
+    for character in team:
+        if not character.is_dead() and character.attributes.silenced:
+            chosen = character
+    return chosen
+
+def findRooted(team):
+    chosen = None
+
+    for character in team:
+        if not character.is_dead() and character.attributes.rooted:
+            chosen = character
+    return chosen
+
+def evasiveAction(chosen,enemyteam,gameMap):
+    # TODO
+    return {
+        "Action": "Move",
+        "CharacterId": chosen.id,
+        "Location": (0,0),
+    }
+
+def attackerPolicy(chosen, myteam, enemyteam):
+    # must break free first
+    if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
+        if chosen.casting is None:
+            cooldown = chosen.abilities[0]:
+            if cooldown == 0
+                return {
+                    "Action": "Cast",
+                    "CharacterId": chosen.id,
+                    "TargetId": chosen.id,
+                    "AbilityId": 0
+                }
+    # attacker cast
+    if chosen.classId == 'Archer':
+        toughTarget = findToughest(enemyteam)
+        if chosen.casting is None:
+            if chosen.abilities[12] == 0:
+                if chosen.in_ability_range_of(toughTarget,gameMap,12):
+                    return {
+                        "Action": "Cast",
+                        "CharacterId": chosen.id,
+                        "TargetId": toughTarget.id,
+                        "AbilityId": 12
+                    }
+
+    # backstab the weakest if possible
+    minHealthTarget = findMinHealth(enemyteam)
+    if chosen.classId == 'Assassin':
+        if chosen.casting is None:
+            if chosen.abilities[11] == 0:
+                if chosen.in_ability_range_of(minHealthTarget,gameMap,11):
+                    return {
+                        "Action": "Cast",
+                        "CharacterId": chosen.id,
+                        "TargetId": minHealthTarget.id,
+                        "AbilityId": 11
+                    }
+    # attack the weakest
+    if chosen.in_range_of(minHealthTarget, gameMap):
+        return {
+            "Action": "Attack",
+            "CharacterId": chosen.id,
+            "TargetId": minHealthTarget.id,
+        }
+    else:
+        # or the most vulnerable
+        vulnerableTarget = findVulnerable(enemyteam)
+        if chosen.in_range_of(vulnerableTarget,gameMap):
+            return {
+                "Action": "Attack",
+                "CharacterId": chosen.id,
+                "TargetId": vulnerableTarget.id,
+            }
+        # move toward the weakest if still strong
+        elif chosen.attributes.health > chosen.attributes.maxHealth/5:
+            return {
+                "Action": "Move",
+                "CharacterId": chosen.id,
+                "TargetId": minHealthTarget.id,
+            }
+        else:
+            return evasiveAction(chosen,enemyteam,gameMap)
+
+def supportCasterPolicy(chosen,myteam,enemyteam):
+    # must break free first
+    if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
+        if chosen.casting is None:
+            cooldown = chosen.abilities[0]:
+            if cooldown == 0
+                return {
+                    "Action": "Cast",
+                    "CharacterId": chosen.id,
+                    "TargetId": chosen.id,
+                    "AbilityId": 0
+                }
+                
+    if chosen.classId == 'Druid':
+        # heal allied
+        minHealthTarget = findMinHealth(myteam)
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+            if chosen.casting is None:
+                if chosen.abilities[3] == 0:
+                    if chosen.in_ability_range_of(minHealthTarget,gameMap,3):
+                        return {
+                            "Action": "Cast",
+                            "CharacterId": chosen.id,
+                            "TargetId": minHealthTarget.id,
+                            "AbilityId": 4
+                        }
+        # armor buff allied
+        vulnerableTarget = findVulnerable(myteam)
+        if chosen.casting is None:
+            if chosen.abilities[4] == 0:
+                if chosen.in_ability_range_of(vulnerableTarget,gameMap,4):
+                    return {
+                        "Action": "Cast",
+                        "CharacterId": chosen.id,
+                        "TargetId": vulnerableTarget.id,
+                        "AbilityId": 4
+                    }
+        # root enemy
+        minHealthTarget = findMinHealth(enemyteam)
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+            if chosen.casting is None:
+                if chosen.abilities[13] == 0:
+                    if chosen.in_ability_range_of(minHealthTarget,gameMap,13):
+                        return {
+                            "Action": "Cast",
+                            "CharacterId": chosen.id,
+                            "TargetId": minHealthTarget.id,
+                            "AbilityId": 13
+                        }
+
+    if chosen.classId == 'Enchanter':
+        # armor/dam buff allied
+        minHealthTarget = findMinHealth(myteam)
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+            if chosen.casting is None:
+                if chosen.abilities[3] == 0:
+                    if chosen.in_ability_range_of(minHealthTarget,gameMap,3):
+                        return {
+                            "Action": "Cast",
+                            "CharacterId": chosen.id,
+                            "TargetId": minHealthTarget.id,
+                            "AbilityId": 4
+                        }
+        # armor nerf enemy
+        vulnerableTarget = findVulnerable(myteam)
+        if chosen.casting is None:
+            if chosen.abilities[4] == 0:
+                if chosen.in_ability_range_of(vulnerableTarget,gameMap,4):
+                    return {
+                        "Action": "Cast",
+                        "CharacterId": chosen.id,
+                        "TargetId": vulnerableTarget.id,
+                        "AbilityId": 4
+                    }
+        # silence enemy
+        minHealthTarget = findMinHealth(enemyteam)
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+            if chosen.casting is None:
+                if chosen.abilities[13] == 0:
+                    if chosen.in_ability_range_of(minHealthTarget,gameMap,13):
+                        return {
+                            "Action": "Cast",
+                            "CharacterId": chosen.id,
+                            "TargetId": minHealthTarget.id,
+                            "AbilityId": 13
+                        }
+
+def attackerCasterPolicy(chosen,myteam,enemyteam):
+
+def tankerPolicy(chosen,myteam,enemyteam):
 
 # ---------------------------------------------------------------------
 

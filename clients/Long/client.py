@@ -177,7 +177,7 @@ def findVulnerable(team):
 def findToughest(team):
     chosen = random.choice(team)
 
-    maxToughness = sys.minint
+    maxToughness = -sys.maxint-1
     for character in team:
         # max damage is 200
         charTough = character.attributes.health/max(1,200-character.attributes.armor)
@@ -188,7 +188,7 @@ def findToughest(team):
 def findMainCaster(team):
     chosen = random.choice(team)
 
-    maxSP = sys.minint
+    maxSP = -sys.maxint-1
     for character in team:
         charSP = character.attributes.spellPower
         if not character.is_dead() and charSP > maxSP:
@@ -198,7 +198,7 @@ def findMainCaster(team):
 def findMainDamage(team):
     chosen = random.choice(team)
 
-    maxDam = sys.minint
+    maxDam = -sys.maxint-1
     for character in team:
         charDam = character.attributes.damage
         if not character.is_dead() and charDam > maxDam:
@@ -233,15 +233,15 @@ def evasiveAction(chosen,enemyteam,gameMap):
     dx5 = 0
     dy5 = 0
     for char in enemyteam:
-        dx5 += (char.location[0]-5)**2
-        dy5 += (char.location[1]-5)**2
+        dx5 += (char.position[0]-5)**2
+        dy5 += (char.position[1]-5)**2
     d5 = dx5 + dy5
 
     dx0 = 0
     dy0 = 0
     for char in enemyteam:
-        dx0 += (char.location[0]-0)**2
-        dy0 += (char.location[1]-0)**2
+        dx0 += (char.position[0]-0)**2
+        dy0 += (char.position[1]-0)**2
     d0 = dx0 + dy0
 
     if d0 < d5: 
@@ -261,7 +261,7 @@ def attackerPolicy(chosen,myteam,enemyteam):
     # must break free first
     if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(0):
+        if chosen.casting is None and chosen.can_use_ability(0):
                 return {
                     "Action": "Cast",
                     "CharacterId": chosen.id,
@@ -272,7 +272,7 @@ def attackerPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Archer':
         # sprint
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(12):
+        if chosen.casting is None and chosen.can_use_ability(12):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -296,7 +296,7 @@ def attackerPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Assassin':
         # sprint
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(12):
+        if chosen.casting is None and chosen.can_use_ability(12):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -305,7 +305,7 @@ def attackerPolicy(chosen,myteam,enemyteam):
             }
 
         #if chosen.casting is None and chosen.abilities[11] == 0:
-        if chosen.can_use_ability(11):
+        if chosen.casting is None and chosen.can_use_ability(11):
             if chosen.in_ability_range_of(minHealthTarget,gameMap,11):
                 return {
                     "Action": "Cast",
@@ -343,7 +343,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
     # must break free first
     if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(0):
+        if chosen.casting is None and chosen.can_use_ability(0):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -354,7 +354,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Druid':
         # heal allied
         minHealthTarget = findMinHealth(myteam)
-        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2:
             if chosen.casting is None:
                 if chosen.abilities[3] == 0:
                     if chosen.in_ability_range_of(minHealthTarget,gameMap,3):
@@ -377,7 +377,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
                     }
         # root enemy
         minHealthTarget = findMinHealth(enemyteam)
-        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2:
             if chosen.casting is None:
                 if chosen.abilities[13] == 0:
                     if chosen.in_ability_range_of(minHealthTarget,gameMap,13):
@@ -393,7 +393,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
         dice = random.uniform(0,1)
         if dice >= 0.5:
             vulnerableTarget = findVulnerable(myteam)
-            if chosen.can_use_ability(7):
+            if chosen.casting is None and chosen.can_use_ability(7):
                 if chosen.in_ability_range_of(vulnerableTarget,gameMap,7):
                     return {
                         "Action": "Cast",
@@ -403,7 +403,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
                     }
         else:
             mainDamTarget = findMainDamage(myteam)
-            if chosen.can_use_ability(7):
+            if chosen.casting is None and chosen.can_use_ability(7):
                 if chosen.in_ability_range_of(mainDamTarget,gameMap,7):
                     return {
                         "Action": "Cast",
@@ -415,7 +415,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
         # armor nerf enemy
         toughTarget = findToughest(enemyteam)
         #if chosen.casting is None and chosen.abilities[4] == 0:
-        if chosen.can_use_ability(6):
+        if chosen.casting is None and chosen.can_use_ability(6):
             if chosen.in_ability_range_of(toughTarget,gameMap,6):
                 return {
                     "Action": "Cast",
@@ -426,7 +426,7 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
         # silence enemy
         mainCastTarget = findMainCaster(enemyteam)
         #if chosen.casting is None and chosen.abilities[13] == 0:
-        if chosen.can_use_ability(5):
+        if chosen.casting is None and chosen.can_use_ability(5):
             if chosen.in_ability_range_of(mainCastTarget,gameMap,5):
                 return {
                     "Action": "Cast",
@@ -452,11 +452,11 @@ def supportCasterPolicy(chosen,myteam,enemyteam):
     else:
         return evasiveAction(chosen,enemyteam,gameMap)
 
-def attackerCasterPolicy(chosen,myteam,enemyteam):
+def attackCasterPolicy(chosen,myteam,enemyteam):
     # must break free first
     if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(0):
+        if chosen.casting is None and chosen.can_use_ability(0):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -466,7 +466,7 @@ def attackerCasterPolicy(chosen,myteam,enemyteam):
 
     if chosen.classId == 'Sorcerer':
         # sacrify health to improve dam
-        if chosen.attributes.health > chosen.attributes.maxHealth/2 and chosen.can_use_ability(8):
+        if chosen.attributes.health > chosen.attributes.maxHealth/2 and chosen.casting is None and chosen.can_use_ability(8):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -475,7 +475,7 @@ def attackerCasterPolicy(chosen,myteam,enemyteam):
             }
         # direct dam cast on enemy
         minHealthTarget = findMinHealth(enemyteam)
-        if chosen.can_use_ability(16):
+        if chosen.casting is None and chosen.can_use_ability(16):
             if chosen.in_ability_range_of(minHealthTarget,gameMap,16):
                 return {
                     "Action": "Cast",
@@ -487,7 +487,7 @@ def attackerCasterPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Wizard':
         # direct dam cast on enemy
         minHealthTarget = findMinHealth(enemyteam)
-        if chosen.can_use_ability(10):
+        if chosen.casting is None and chosen.can_use_ability(10):
             if chosen.in_ability_range_of(minHealthTarget,gameMap,10):
                 return {
                     "Action": "Cast",
@@ -497,7 +497,7 @@ def attackerCasterPolicy(chosen,myteam,enemyteam):
                 }
 
         mainDamTarget = findMainDamage(enemyteam)
-        if chosen.can_use_ability(9):
+        if chosen.casting is None and chosen.can_use_ability(9):
             if chosen.in_ability_range_of(mainDamTarget,gameMap,9):
                 return {
                     "Action": "Cast",
@@ -527,7 +527,7 @@ def tankerPolicy(chosen,myteam,enemyteam):
     # must break free first
     if chosen.attributes.stunned or chosen.attributes.silenced or chosen.attributes.rooted:
         #if chosen.casting is None and chosen.abilities[0] == 0:
-        if chosen.can_use_ability(0):
+        if chosen.casting is None and chosen.can_use_ability(0):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -537,9 +537,9 @@ def tankerPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Paladin':
         # heal allied
         minHealthTarget = findMinHealth(myteam)
-        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2
+        if minHealthTarget.attributes.health < minHealthTarget.attributes.maxHealth/2:
             #if chosen.casting is None and chosen.abilities[3] == 0:
-            if chosen.can_use_ability(3):
+            if chosen.casting is None and chosen.can_use_ability(3):
                 if chosen.in_ability_range_of(minHealthTarget,gameMap,3):
                     return {
                         "Action": "Cast",
@@ -549,7 +549,7 @@ def tankerPolicy(chosen,myteam,enemyteam):
                     }
         # stun enemy
         mainDamTarget = findMainDamage(enemyteam)
-        if chosen.can_use_ability(14):
+        if chosen.casting is None and  chosen.can_use_ability(14):
             if chosen.in_ability_range_of(mainDamTarget,gameMap,14):
                 return {
                     "Action": "Cast",
@@ -560,7 +560,7 @@ def tankerPolicy(chosen,myteam,enemyteam):
     if chosen.classId == 'Warrior':
         # stun enemy
         mainDamTarget = findMainDamage(enemyteam)
-        if chosen.can_use_ability(1):
+        if chosen.casting is None and  chosen.can_use_ability(1):
             if chosen.in_ability_range_of(mainDamTarget,gameMap,1):
                 return {
                     "Action": "Cast",
@@ -569,7 +569,7 @@ def tankerPolicy(chosen,myteam,enemyteam):
                     "AbilityId": 1
                 }
         # self armor buff
-        if chosen.can_use_ability(15):
+        if chosen.casting is None and chosen.can_use_ability(15):
             return {
                 "Action": "Cast",
                 "CharacterId": chosen.id,
@@ -578,7 +578,7 @@ def tankerPolicy(chosen,myteam,enemyteam):
             }
 
     mainDamTarget = findMainDamage(enemyteam)
-    if chosen.in_range_off(mainDamTarget,gameMap):
+    if chosen.in_range_of(mainDamTarget,gameMap):
         return {
             "Action": "Attack",
             "CharacterId": chosen.id,
